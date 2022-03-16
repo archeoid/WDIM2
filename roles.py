@@ -12,8 +12,8 @@ FEEDBACK_EMOJI = ["✊", "🙏", "👏", "🤝", "🤏", "😼"]
 db = pickledb.load('roles.db', False)
 
 async def on_command(request):
-    if not request.author.permissions.manage_roles:
-        return #unauthorized
+    if not request.author.guild_permissions.manage_roles:
+        return "Unauthorized. This incident will be reported"
 
     if not request.reference:
         return "Invalid use"
@@ -105,7 +105,7 @@ async def on_reaction_add(payload, member):
     return None
 
 async def on_reaction_remove(payload, member):
-    role = lookup_role(payload)
+    role = lookup_role(payload, member)
 
     if not role:
         return

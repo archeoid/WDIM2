@@ -75,9 +75,8 @@ async def on_raw_reaction_remove(payload):
     if error: print(error)
 
 
-#f = open('log.txt', 'a')
-#sys.stdout = f
+token = ""
+with open('token.txt') as f:
+    token = f.read()
 
-client.run('token')
-
-#f.close()
+client.run(token)
