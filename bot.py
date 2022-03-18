@@ -18,6 +18,16 @@ client = discord.Client(intents = client_intents)
 
 random.seed(time.time())
 
+token = ""
+with open('token.txt') as f:
+    token = f.read()
+
+help = ""
+with open('help.txt') as f:
+    help = f.read()
+
+
+
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
@@ -40,6 +50,9 @@ async def on_message(request):
     
     if request.content.startswith('.roles'):
         error = await roles.on_command(request)
+
+    if request.content.startswith('.help'):
+        error = f"```\n{help}```"
 
     if error:
         await request.channel.send(error)
@@ -74,10 +87,5 @@ async def on_raw_reaction_remove(payload):
     member = client.get_guild(guild_id).get_member(user_id)
     error = await roles.on_reaction_remove(payload, member)
     if error: print(error)
-
-
-token = ""
-with open('token.txt') as f:
-    token = f.read()
 
 client.run(token)
