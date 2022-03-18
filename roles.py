@@ -29,38 +29,57 @@ async def on_command(request):
     
     return await on_map(request, input.split())   
 
-async def on_map(request, parameters):   
-    if len(parameters) != 2:
+async def on_map(request, parameters):
+
+    #dont accept zero or odd number of arguments (must be emoji/role pairs!) 
+    if not parameters or len(parameters) % 2 != 0:
         return "Invalid use"
 
-    emoji = parameters[0]
-    if match := DISCORD_EMOJI_REGEX.fullmatch(emoji):
-        emoji = match.group(1)
-    elif match := UNICODE_EMOJI_REGEX.fullmatch(emoji):
-        emoji = emoji
-    else:
-        return "Not an emoji"
-
-    role = parameters[1]
-    if match := DISCORD_ROLE_REGEX.fullmatch(role):
-        role = match.group(1)
-    else:
-        return "Not a role"
+    #make sure the message reference is valid
+    reference = request.reference.resolved
+    if not reference or type(reference) != discord.Message:
+        return "Invalid use"
     
+    pairs = [(parameters[i], parameters[i+1]) for i in range(0,len(parameters),2)]
+
+    processed = []
+
+    #extract the role and emoji ID (if applicable)
+    for raw_emoji, raw_role in pairs:
+        emoji = raw_emoji
+        if match := DISCORD_EMOJI_REGEX.fullmatch(emoji):
+            emoji = match.group(1) #extract the emoji ID
+        elif match := UNICODE_EMOJI_REGEX.fullmatch(emoji):
+            pass
+        else:
+            return f"`{emoji}` is not an emoji!"
+
+        role = raw_role
+        if match := DISCORD_ROLE_REGEX.fullmatch(role):
+            role = match.group(1) #extract the role ID
+        else:
+            return f"`{role}` is not a role!"
+
+        processed += [{'emoji': emoji, 'role':role, 'raw_emoji': raw_emoji}]
+
     message_id = str(request.reference.message_id)
 
-    reference = request.reference.resolved
 
-    if reference and type(reference) == discord.Message:
-        await reference.add_reaction(parameters[0])
-
-
+    #now store the mappings
     if not db.get(message_id):
         db.dcreate(message_id)
-    db.dadd(message_id, (emoji, role)) #map emoji -> role for this message
+
+    for m in processed:
+        db.dadd(message_id, (m['emoji'], m['role']))
+        #add a reaction to the message (saves the admins having too)
+        await reference.add_reaction(m['raw_emoji'])
+
+    #write to disk
     db.dump()
     
+    #finally, acknowledge the command
     await request.add_reaction(random.choice(FEEDBACK_EMOJI))
+
     return
 
 async def on_clear(request):
