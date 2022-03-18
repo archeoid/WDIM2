@@ -52,13 +52,13 @@ async def on_map(request, parameters):
         elif match := UNICODE_EMOJI_REGEX.fullmatch(emoji):
             pass
         else:
-            return f"`{emoji}` is not an emoji!"
+            return f"'{emoji}' is not an emoji!"
 
         role = raw_role
         if match := DISCORD_ROLE_REGEX.fullmatch(role):
             role = match.group(1) #extract the role ID
         else:
-            return f"`{role}` is not a role!"
+            return f"'{role}' is not a role!"
 
         processed += [{'emoji': emoji, 'role':role, 'raw_emoji': raw_emoji}]
 
