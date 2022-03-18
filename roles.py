@@ -12,16 +12,20 @@ FEEDBACK_EMOJI = ["✊", "🙏", "👏", "🤝", "🤏", "😼"]
 db = pickledb.load('roles.db', False)
 
 async def on_command(request):
+    #only respond to admins
     if not request.author.guild_permissions.manage_roles:
         return "Unauthorized. This incident will be reported"
 
+    #command only works when replying to a message (the target)
     if not request.reference:
         return "Invalid use"
 
-    input = request.content.removeprefix('.roles').strip()
+    input = request.content.removeprefix('.roles').strip().lower()
 
-    if input.lower() == "clear":
+    if input == "clear":
         return await on_clear(request)
+    if input == "dump":
+        return await on_dump(request)
     
     return await on_map(request, input.split())   
 
@@ -53,7 +57,7 @@ async def on_map(request, parameters):
 
     if not db.get(message_id):
         db.dcreate(message_id)
-    db.dadd(message_id, (emoji, role))
+    db.dadd(message_id, (emoji, role)) #map emoji -> role for this message
     db.dump()
     
     await request.add_reaction(random.choice(FEEDBACK_EMOJI))
@@ -68,6 +72,23 @@ async def on_clear(request):
         return "Nothing to clear"
 
     await request.add_reaction(random.choice(FEEDBACK_EMOJI))
+
+async def on_dump(request):
+    message_id = str(request.reference.message_id)
+    
+    output = ""
+
+    if db.get(message_id):
+        map = db.dgetall(message_id)
+        for emoji, role in map.items():
+            if emoji.isdecimal():
+                emoji = f"<:emoji:{emoji}>"
+
+            output += f"{emoji} <@&{role}>\n"
+    else:
+        output = "No roles mapped to this message"
+    
+    return output
 
 def lookup_role(payload, member):
     message_id = str(payload.message_id)

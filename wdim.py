@@ -79,7 +79,7 @@ async def on_wdim(request, client):
     async for m in request.channel.history(limit=None, after=timestamp):
         if m.author.id == client.user.id: #ignore our messages
             continue
-        if m.content.startswith('.wdim'): #ignore request messages
+        if m.content.startswith('.'): #ignore request messages
             continue
         if stop_on_author and m.author.id == request.author.id:
             break

@@ -10,6 +10,7 @@ import time
 client_intents = discord.Intents()
 client_intents.guilds = True
 client_intents.members = True
+client_intents.messages = True
 client_intents.guild_messages = True
 client_intents.guild_reactions = True
 
