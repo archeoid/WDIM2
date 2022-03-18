@@ -1,6 +1,4 @@
-from datetime import datetime
 import discord
-from sympy import true
 import wdim
 import roles
 
