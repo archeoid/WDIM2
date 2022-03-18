@@ -1,0 +1,13 @@
+Cython==0.29.28
+discord.py==1.7.3
+emoji==1.6.3
+freetype_py==2.2.0
+HarfPy==0.9
+matplotlib==3.5.1
+numpy==1.22.2
+opencv_python==4.5.5.62
+pickleDB==0.9.2
+Pillow==9.0.1
+Qahirah==1.1
+setuptools==59.3.0
+sympy==1.10

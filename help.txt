@@ -1,0 +1,19 @@
+.wdim
+    by default all messages since the users last post will be used.
+    override this by specifying the time span:
+    .wdim #unit. units are m, h, d. for example:
+        .wdim
+        .wdim 10m
+        .wdim 7d
+
+.roles
+    must be in a reply, command will be applied to the message you are replying to.
+    bot will acknowledge commands with a react, or an error.
+    .roles emoji @role ...
+        maps emojis to roles, for example:
+            .roles 😎 @orange
+            .roles 😎 @orange 🤡 @blue
+    .roles clear
+        clears all mappings.
+    .roles dump
+        displays all mappings.

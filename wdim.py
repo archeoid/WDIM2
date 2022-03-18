@@ -124,8 +124,10 @@ async def do_wordcloud(request, tokens):
 
     wordcloud = wc.WordCloud(1200, 600, "WhitneyMedium.ttf", "TwemojiMozilla.ttf")
     wordcloud.add_data(tokens)
-    wordcloud.compute()
-    image = wordcloud.write()
 
-    await request.channel.send(file=discord.File(image, filename="wordcloud.png"))
+    async with request.channel.typing():
+        wordcloud.compute()
+        image = wordcloud.write()
+
+        await request.channel.send(file=discord.File(image, filename="wordcloud.png"))
     return None

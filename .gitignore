@@ -1,4 +1,4 @@
-*.txt
+token.txt
 *.so
 *.c
 *.db
