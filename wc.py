@@ -10,8 +10,6 @@ import emoji
 import io
 import ctypes as ct
 
-from integral_image import get_space
-
 class Extent:
     def __init__(self, x, y, width, height):
         self.x = x
