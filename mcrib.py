@@ -20,21 +20,14 @@ async def on_mcrib(request):
 
     mccairo = cairo.Context.create(mcrib)
 
-    mcft = cairo.get_ft_lib()
-    mcface = mcft.new_face("Impact.ttf")
-    mcface.set_char_size(size=10, resolution=10)
-    mcfont = cairo.FontFace.create_for_ft_face(mcface)
-
-    mccairo.set_font_face(mcfont)
-    mccairo.set_font_size(24)
-
-    mccairo.move_to((216, 196))#(236,217))
+    mccairo.move_to((216, 178))#(236,217))
 
     mcname = request.author.name
     if request.author.nick:
         mcname = request.author.nick
+
+    wc.lib.path_text(mccairo._cairobj, mcname.encode('utf-8'), 24, "Impact".encode('utf-8'))
     
-    mccairo.text_path(mcname)
     mccairo.source_colour = (1.0, 1.0, 1.0)
     mccairo.fill_preserve()
     mccairo.source_colour = (0.0, 0.0, 0.0)

@@ -2,19 +2,50 @@ import math
 import qahirah as cairo
 from qahirah import CAIRO as CAIRO
 import harfbuzz as hb
-import cv2
 import colorsys
 import numpy as np
 import matplotlib.pyplot as plt
 import random
 import emoji
 import io
+import ctypes as ct
 
-from integral_image import get_space, query_location
+from integral_image import get_space
+
+class Extent:
+    def __init__(self, x, y, width, height):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+lib = ct.CDLL('./lib.so')
+
+lib.get_space.argtypes = [
+    np.ctypeslib.ndpointer(dtype=np.int32, ndim=2, flags='C_CONTIGUOUS'),
+    ct.c_int, ct.c_int, ct.c_int, ct.c_int,
+    ct.c_void_p, ct.c_void_p
+]
+lib.get_space.restype = ct.c_int
+lib.query_location.argtypes = [
+    np.ctypeslib.ndpointer(dtype=np.int32, ndim=2, flags='C_CONTIGUOUS'),
+    ct.c_int, ct.c_int, ct.c_int, ct.c_int, ct.c_int, ct.c_int
+]
+lib.query_location.restype = ct.c_int
+lib.perform_sum.argtypes = [
+    np.ctypeslib.ndpointer(dtype=np.uint8, ndim=2, flags='C_CONTIGUOUS'),
+    ct.c_int, ct.c_int,
+    np.ctypeslib.ndpointer(dtype=np.int32, ndim=2, flags='C_CONTIGUOUS')]
+lib.path_text.argtypes = [ct.c_void_p, ct.c_char_p, ct.c_int, ct.c_char_p]
+lib.get_text_extent.argtypes = [
+    ct.c_void_p, ct.c_char_p, ct.c_int, ct.c_char_p,
+    ct.c_void_p, ct.c_void_p, ct.c_void_p, ct.c_void_p
+]
+lib.load_font.argtypes = [ct.c_char_p]
 
 class IntegralImage:
     def __init__(self, width, height):
-        self.width, self.height = width, height
+        self.width, self.height = int(width), int(height)
         self.random = random.Random()
 
         self.image = None
@@ -24,65 +55,75 @@ class IntegralImage:
         self.reset()
 
     def reset(self):
-        self.image = np.zeros((self.height + 1, self.width + 1), dtype=np.int32)
+        self.image = np.zeros((self.height, self.width), dtype=np.int32)
         self.surface_data = np.zeros((self.height, self.width), dtype=np.uint8)
         self.surface = cairo.ImageSurface.create_for_data(self.surface_data.ctypes.data, CAIRO.FORMAT_A8, (self.width, self.height), self.width)
         self.ctx = cairo.Context.create(self.surface)
 
     def get_location(self, width, height, padding) -> (int, int):
-        width = width+2*padding
-        height = height+2*padding
+        width = int(width+2*padding)
+        height = int(height+2*padding)
 
-        if self.height < height or self.width < width:
+        if self.height <= height or self.width <= width:
             return None
-        
-        space = get_space(self.image, width, height, self.random)
-        if not space:
-            return None
-        
-        return (space[0]+padding, space[1]+padding)
 
-    def query(self, x, y, w, h) -> bool:
-        return query_location(self.image, x, y, w, h)
+        x = ct.c_int(0)
+        y = ct.c_int(0)
+
+        got = lib.get_space(self.image, self.width, self.height, width, height,
+                            ct.byref(x), ct.byref(y))
+        if got != 0:
+            return None
+
+        return (x.value+padding, y.value+padding)
+
+    def query(self, x, y, w, h):
+        area = lib.query_location(self.image, self.width, self.height,
+            x, y, w, h)
+        
+        return area
 
     def update(self):
-        self.image = cv2.integral(self.surface_data, sdepth=cv2.CV_32S)
+        lib.perform_sum(self.surface_data, self.width, self.height, self.image)
 
-    def view(self, w, h, path="mask.png"):
+    def view(self, w, h, path="mask.png", x_p = -1, y_p = -1):
         data = np.zeros(shape=(self.height, self.width), dtype=np.uint8)
         for x in range(self.width - w):
             for y in range(self.height - h):
-                if self.query(y, x, h, w):
+                if self.query(x, y, w, h) == 0:
                     data[y, x] = 255
+                if x == x_p and y == y_p:
+                    data[y, x] = 200
         surface = cairo.ImageSurface.create_for_data(data.ctypes.data, CAIRO.FORMAT_A8, (self.width, self.height), self.width)
         surface.write_to_png(path)
 
+        self.surface.write_to_png("surface.png")
+
 class WordCloud:
-    def __init__(self, width, height, font, emoji_font):
+    def __init__(self, width, height, font_family, emoji_font):
         self.random = random.Random()
         self.width, self.height = width, height
         self.mask = IntegralImage(self.width, self.height)
 
         # Constants
-        self.max_font_size = 150
-        self.min_font_size = 3
-        self.inc_font_size = 3
+        self.max_font_size = int(height/2)
+        self.min_font_size = 4
+        self.inc_font_size = 1
         self.outline = 0.03
         self.padding = 3
         self.vertical_text = True
 
         ft = cairo.get_ft_lib()
-        face = ft.new_face(font)
-        face.set_char_size(size=10, resolution=10)
-        self.font = cairo.FontFace.create_for_ft_face(face)
+
+        self.font_family = font_family.encode('utf-8')
 
         emoji_face = ft.new_face(emoji_font)
         emoji_face.set_char_size(size=109, resolution=72) #for NotoColorEmoji
         self.emoji_font = cairo.FontFace.create_for_ft_face(emoji_face)
-        self.harfbuzz_font = hb.Font.ft_create(emoji_face)
-        self.emoji_layered = self.harfbuzz_font.face.ot_color_has_layers
+        self.hb_emoji_font = hb.Font.ft_create(emoji_face)
+        self.emoji_layered = self.hb_emoji_font.face.ot_color_has_layers
         if self.emoji_layered:
-            self.emoji_palette = self.harfbuzz_font.face.ot_colour_palette_get_colours(0)
+            self.emoji_palette = self.hb_emoji_font.face.ot_colour_palette_get_colours(0)
             def to_rgba(c):
                 return (hb.HARFBUZZ.colour_get_red(c)/255,
                 hb.HARFBUZZ.colour_get_green(c)/255, 
@@ -107,7 +148,6 @@ class WordCloud:
         self.ctx = cairo.Context.create(self.surface)
         self.mask.reset()
 
-        self.ctx.set_font_face(self.font)
         self.data = []
 
     def add_data(self, data):
@@ -119,7 +159,6 @@ class WordCloud:
     def compute(self) -> int:
         size = self.max_font_size
         total = 0
-        self.mask.ctx.set_font_face(self.font)
         for d in self.data:
             while size > self.min_font_size:
                 if isinstance(d, str):
@@ -139,15 +178,13 @@ class WordCloud:
     def __render_word(self, word, size):
         if emoji.is_emoji(word):
             return self.__render_emoji(word, size)
- 
-        self.ctx.set_font_face(self.font)       
-        self.ctx.set_font_size(size)
-        ext = self.ctx.text_extents(word)
+
+        ext = self.__get_text_extent(word, size)
         w, h = int(ext.width), int(ext.height)
 
         pos = self.mask.get_location(w, h, self.padding)
         if pos:
-            y, x = pos
+            x, y = pos
             self.__internal_render_word(x, y, ext, word, size)
             return True
 
@@ -155,7 +192,7 @@ class WordCloud:
             return False
         pos = self.mask.get_location(h, w, self.padding)
         if pos:
-            y, x = pos
+            x, y = pos
             self.__internal_render_word(x, y, ext, word, size, rotate=True)
             return True
 
@@ -168,14 +205,14 @@ class WordCloud:
         buf = hb.Buffer.create()
         buf.add_str(emoji)
         buf.guess_segment_properties()
-        hb.shape(self.harfbuzz_font, buf)
+        hb.shape(self.hb_emoji_font, buf)
         glyph = buf.get_glyphs()[0][0]
 
         subglyphs = [cairo.Glyph(glyph.index, (0,0))]
         colors = [None]
 
         if self.emoji_layered:
-            layers = self.harfbuzz_font.face.ot_colour_glyph_get_layers(glyph.index)
+            layers = self.hb_emoji_font.face.ot_colour_glyph_get_layers(glyph.index)
             for l in layers:
                 subglyphs += [cairo.Glyph(l.glyph, (0, 0))]
                 colors += [l.colour_index]
@@ -183,7 +220,7 @@ class WordCloud:
         ext = self.ctx.glyph_extents(subglyphs)
         pos = self.mask.get_location(ext.width, ext.height, self.padding)
         if pos:
-            y, x = pos
+            x, y = pos
             self.__internal_render_emoji(x, y, ext, subglyphs, colors, size)
             return True
 
@@ -198,7 +235,7 @@ class WordCloud:
 
         pos = self.mask.get_location(w, h, self.padding)
         if pos:
-            y, x = pos
+            x, y = pos
 
             for target in [self.surface, self.mask.surface]:
                 ctx = cairo.Context.create(target.create_for_rectangle(cairo.Rect(x, y, w, h)))
@@ -225,21 +262,21 @@ class WordCloud:
         return color, outline
 
     def __internal_render_word(self, x, y, ext, word, size, rotate=False):
-        w, h, b_w, b_h = int(ext.width), int(ext.height), int(ext.x_bearing), int(ext.y_bearing)
+        w, h = int(ext.width), int(ext.height)
         color, outline = self.__get_color()
 
         if rotate:
-            w, h, b_w, b_h = h, w, b_h, b_w
+            w, h = h, w
 
         for ctx in [self.ctx, self.mask.ctx]:
-            ctx.set_font_face(self.font)
-            ctx.set_font_size(size)
             if rotate:
-                ctx.move_to((x - b_w, y + h + b_h))
+                ctx.move_to((x, y + h))
                 ctx.rotate(1.5 * math.pi)
             else:
-                ctx.move_to((x - b_w, y - b_h))
-            ctx.text_path(word)
+                ctx.move_to((x, y))
+
+            self.__text_path(ctx, word, size)
+
             ctx.source_colour = color
             ctx.fill_preserve()
             ctx.source_colour = outline
@@ -271,6 +308,21 @@ class WordCloud:
             ctx.restore()
         self.mask.update()
 
+    def __get_text_extent(self, word, size):
+        x = ct.c_int(0)
+        y = ct.c_int(0)
+        width = ct.c_int(0)
+        height = ct.c_int(0)
+
+        lib.get_text_extent(self.ctx._cairobj, word.encode('utf-8'), size, self.font_family,
+            ct.byref(width), ct.byref(height), ct.byref(x), ct.byref(y))
+
+        return Extent(x.value, y.value, width.value, height.value)
+
+    def __text_path(self, ctx, word, size):
+        lib.path_text(ctx._cairobj, word.encode('utf-8'), size, self.font_family)
+
+
     def write(self) -> io.BytesIO:
         buf = io.BytesIO()
         self.surface.write_to_png_file(buf)
@@ -292,3 +344,6 @@ def png_to_surface(data):
         ctx.line_to((100, 0))
         ctx.stroke()
         return surface
+        
+def load_font(path):
+    lib.load_font(path.encode('utf-8'))

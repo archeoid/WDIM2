@@ -14,7 +14,7 @@ DISCORD_REGEX = re.compile("<[^>]+>")
 URL_REGEX = re.compile("(http://|https://|www\.)[^\s]+")
 SPLIT_REGEX = re.compile('|'.join(map(re.escape, [c for c in string.whitespace])))
 PUNC_TRANSLATE = str.maketrans('', '', string.punctuation)
-FILTERED_WORDS = ["","below","i'd","could","been","out","you'll","am","both","can't","where's","you've","ours","own","not","for","its","me","r","isn't","i'll","all","can","www","shouldn't","after","ought","herself","very","and","than","we'll","our","what's","against","being","when's","under","wouldn't","let's","of","over","to","like","her","yours","in","just","each","the","your","itself","she","couldn't","too","by","this","it","my","com","ever","few","hers","i've","shall","how's","did","there","you","with","so","otherwise","yourself","same","such","yourselves","whom","here","themselves","have","while","who's","during","myself","only","that","why's","is","that's","these","he'll","his","cannot","he'd","from","further","mustn't","before","we'd","he","they'll","do","them","aren't","their","we","they","http","hadn't","ourselves","why","would","other","haven't","she'll","was","didn't","has","they'd","had","more","doesn't","but","also","she's","those","hence","having","you're","as","were","she'd","down","here's","again","doing","who","him","it's","i","we're","hasn't","they've","through","into","since","where","a","does","if","k","what","else","above","himself","weren't","when","any","be","should","theirs","no","he's","then","up","won't","most","they're","we've","are","off","shan't","an","get","until","because","however","which","therefore","or","about","you'd","once","nor","some","don't","between","at","there's","i'm","wasn't","how","on","oh","yeah","stuff","well","still","make","ok","on"]
+FILTERED_WORDS = ["", "below","id","could","been","out","youll","am","both","cant","wheres","youve","ours","own","not","for","its","me","r","isnt","ill","all","can","www","shouldnt","after","ought","herself","very","and","than","well","our","whats","against","being","whens","under","wouldnt","lets","of","over","to","like","her","yours","in","just","each","the","your","itself","she","couldnt","too","by","this","it","my","com","ever","few","hers","ive","shall","hows","did","there","you","with","so","otherwise","yourself","same","such","yourselves","whom","here","themselves","have","while","whos","during","myself","only","that","whys","is","thats","these","hell","his","cannot","hed","from","further","mustnt","before","wed","he","theyll","do","them","arent","their","we","they","http","hadnt","ourselves","why","would","other","havent","shell","was","didnt","has","theyd","had","more","doesnt","but","also","shes","those","hence","having","youre","as","were","shed","down","heres","again","doing","who","him","its","i","were","hasnt","theyve","through","into","since","where","a","does","if","k","what","else","above","himself","werent","when","any","be","should","theirs","no","hes","then","up","wont","most","theyre","weve","are","off","shant","an","get","until","because","however","which","therefore","or","about","youd","once","nor","some","dont","between","at","theres","im","wasnt","how","on","oh","yeah","stuff","well","still","make","ok","on"]
 
 cooldowns = {}
 COOLDOWN = datetime.timedelta(minutes=5)
@@ -74,11 +74,7 @@ async def do_wordcloud(request, data, message):
         if type(data[i]) == int:
             data[i] = resolve_discord_emoji(data[i])
 
-    wordcloud = wc.WordCloud(1200, 600, "WhitneyMedium.ttf", "TwemojiMozilla.ttf")
-
-    #double max font size for sparse wordclouds (looks better)
-    if len(data) < 30:
-        wordcloud.max_font_size *= 2
+    wordcloud = wc.WordCloud(1200, 600, "Whitney", "TwemojiMozilla.ttf")
 
     wordcloud.add_data(data)
 
@@ -171,6 +167,9 @@ def tokenize(message):
 
     #split message into words
     words = SPLIT_REGEX.split(message)
+
+    #remove 1 letter words
+    words = [w for w in words if len(w) > 1]
     
     #return words and emojis
     return words + unicode_emojis + discord_emojis
@@ -201,3 +200,7 @@ def enforce_cooldown(author, channel, now):
             return f"Cool it champ! Wait another {stringify_time(remaining)}."
     cooldowns[key] = now
     return None
+
+def initialize():
+    wc.load_font("WhitneyMedium.ttf")
+    wc.load_font("Impact.ttf")

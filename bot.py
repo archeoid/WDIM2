@@ -16,6 +16,7 @@ client_intents.guild_reactions = True
 client = discord.Client(intents = client_intents)
 
 random.seed(time.time())
+wdim.initialize()
 
 token = ""
 with open('token.txt') as f:
@@ -26,10 +27,13 @@ with open('help.txt') as f:
     help = f.read()
 
 
-
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
+
+    a = discord.Activity(type=discord.ActivityType.watching, name="👀")
+    g = discord.Game("Elden Ring")
+    await client.change_presence(status=discord.Status.online, activity=g)
 
 @client.event
 async def on_message(request):
