@@ -53,7 +53,7 @@ async def on_message(request):
         error = f"```\n{help}```"
 
     if error:
-        await request.channel.send(error)
+        await request.reply(error)
 
 @client.event
 async def on_raw_reaction_add(payload):
