@@ -30,11 +30,16 @@ class IntegralImage:
         self.ctx = cairo.Context.create(self.surface)
 
     def get_location(self, width, height, padding) -> (int, int):
+        width = width+2*padding
+        height = height+2*padding
+
         if self.height < height or self.width < width:
             return None
-        space = get_space(self.image, height+2*padding, width+2*padding, self.random)
+        
+        space = get_space(self.image, width, height, self.random)
         if not space:
             return None
+        
         return (space[0]+padding, space[1]+padding)
 
     def query(self, x, y, w, h) -> bool:
@@ -60,8 +65,8 @@ class WordCloud:
 
         # Constants
         self.max_font_size = 150
-        self.min_font_size = 5
-        self.inc_font_size = 5
+        self.min_font_size = 3
+        self.inc_font_size = 3
         self.outline = 0.03
         self.padding = 3
         self.vertical_text = True

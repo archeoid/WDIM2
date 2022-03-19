@@ -1,6 +1,7 @@
 import discord
 import wdim
 import roles
+import mcrib
 
 import random
 import time
@@ -42,15 +43,20 @@ async def on_message(request):
     
     error = None
 
-    if request.content.startswith('.wdim'):
+    command = request.content.lower()
+
+    if command.startswith('.wdim'):
         async with request.channel.typing():
             error = await wdim.on_wdim(request, client)
     
-    if request.content.startswith('.roles'):
+    if command.startswith('.roles'):
         error = await roles.on_command(request)
 
-    if request.content.startswith('.help'):
+    if command.startswith('.help'):
         error = f"```\n{help}```"
+
+    if command.startswith('.mcrib'):
+        error = await mcrib.on_mcrib(request)
 
     if error:
         await request.reply(error)
