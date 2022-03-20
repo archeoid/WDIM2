@@ -22,8 +22,8 @@ MAXTIME = datetime.timedelta(days=7)
 OVERLOOK = datetime.timedelta(minutes=3)
 
 async def on_wdim(request, client):
-    parameters = request.content.removeprefix('.wdim')
-    parameters = parameters.removeprefix('.wc').strip()
+    parameters = request.content.lower()
+    parameters = parameters.removeprefix('.wdim').removeprefix('.wc').strip()
 
     now = request.created_at
     author = request.author.id
