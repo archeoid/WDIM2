@@ -49,7 +49,7 @@ async def on_message(request):
 
     command = request.content.lower()
 
-    if command.startswith('.wdim'):
+    if command.startswith('.wdim') or command.startswith('.wc'):
         async with request.channel.typing():
             error = await wdim.on_wdim(request, client)
     
