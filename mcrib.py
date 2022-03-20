@@ -4,6 +4,7 @@ import qahirah as cairo
 from qahirah import CAIRO as CAIRO
 import io
 from urllib import request
+import random
 
 def resolve_mcrib():
     url = "https://cdn.discordapp.com/attachments/869468815283605524/954586510848561273/unknown.png"
@@ -38,6 +39,71 @@ async def on_mcrib(request):
     mcrib.write_to_png_file(mcbuf)
     mcbuf.seek(0)
 
-    await request.reply(file=discord.File(mcbuf, filename="mc(you).png"))
+    await request.reply(content=generate_mcrib_sentance(), file=discord.File(mcbuf, filename="mc(you).png"))
 
     return None
+
+def markov_process(path):
+    p = {}
+
+    body = ""
+    with open(path) as f:
+        body = f.read()
+
+    lines = body.split('\n')
+
+    for l in lines:
+        if not "^" in p:
+            p["^"] = []
+        words = l.split()
+
+        if len(words) == 0:
+            continue
+
+        p["^"].append(words[0])
+
+        for i in range(1, len(words)):
+            last = words[i-1]
+            key = last.lower()
+            this = words[i]
+
+            if not key in p:
+                p[key] = []
+            
+            p[key].append(this.strip())
+
+        last = words[-1].lower()
+        if not last in p:
+            p[last] = []
+        
+        p[last].append("$")
+    return p
+
+def valid_mcrib_sentance(sentance):
+    if "rib" in sentance.lower():
+        return True
+
+def generate_mcrib_sentance():
+    p = transcript
+
+    out = ""
+
+    while not valid_mcrib_sentance(out):
+        current = "^"
+        out = ""
+        while True:
+            if not current.lower() in p:
+                break
+            current = random.choice(p[current.lower()])
+
+            if current == "$":
+                break
+
+            if current in "!,?.":
+                out = out[:-1]
+
+            out += current + " "
+            
+    return out
+
+transcript = markov_process("mcrib.txt")
