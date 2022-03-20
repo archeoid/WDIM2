@@ -180,7 +180,7 @@ class WordCloud:
         ext = self.__get_text_extent(word, size)
         w, h = int(ext.width), int(ext.height)
 
-        pos = self.mask.get_location(w, h, self.padding)
+        pos = self.mask.get_location(w, h, self.padding + (size * self.outline))
         if pos:
             x, y = pos
             self.__internal_render_word(x, y, ext, word, size)
@@ -188,7 +188,7 @@ class WordCloud:
 
         if not self.vertical_text:
             return False
-        pos = self.mask.get_location(h, w, self.padding)
+        pos = self.mask.get_location(h, w, self.padding + (size * self.outline))
         if pos:
             x, y = pos
             self.__internal_render_word(x, y, ext, word, size, rotate=True)
