@@ -56,7 +56,11 @@ async def on_wdim(request, client):
                 delta = now-m.created_at
                 break
         count += 1
+
         tokens += tokenize(m.content)
+
+        for r in m.reactions:
+            tokens += tokenize(r.count * str(r.emoji))
 
     #turn the tokens into a list of words/emoji ID's, most frequent first
     data = parse_tokens(tokens)
@@ -90,14 +94,15 @@ def parse_time(time_string):
     if not time_string:
         return MAXTIME, None
 
-    error = "Invalid time duration"
     delta = 0
+    
+    duration = time_string[:-1]
     try:
-        delta = int(time_string[:-1])
+        delta = int(duration)
     except Exception:
-        return None, error
+        return None, f"Invalid time duration: '{duration}'"
     if delta <= 0:
-        return None, error
+        return None, f"Negative time duration: '{duration}'"
     unit = time_string[-1].lower()
     if unit == "d":
         delta *= 86400
@@ -106,7 +111,7 @@ def parse_time(time_string):
     elif unit == "m":
         delta *= 60
     else:
-        return None, "Invalid time unit"
+        return None, f"Unknown time unit: '{unit}'"
 
     try:
         delta = datetime.timedelta(seconds=delta)
@@ -114,7 +119,7 @@ def parse_time(time_string):
         return None, error
 
     if delta > MAXTIME:
-        return None, error
+        return None, "7 days maximum!"
 
     return delta, None
 
@@ -175,12 +180,16 @@ def tokenize(message):
     #return words and emojis
     return words + unicode_emojis + discord_emojis
 
+def is_emoji(t):
+    return type(t) == int or UNICODE_EMOJI_REGEX.match(t)
+
 def parse_tokens(tokens):
     #filter/process words using gigabrain code (see tokenization.py)
-    occurances = unigrams_and_bigrams([t for t in tokens if type(t) == str], FILTERED_WORDS)
+    words = [t for t in tokens if not is_emoji(t)]
+    occurances = unigrams_and_bigrams(words, FILTERED_WORDS)
 
     #add emoji's
-    for t in [t for t in tokens if type(t) == int]:
+    for t in [t for t in tokens if is_emoji(t)]:
         if t in occurances:
             occurances[t] += 1
         else:

@@ -39,10 +39,10 @@ async def on_ready():
 async def on_message(request):
     if request.author == client.user:
         return
-    if type(request.author) != discord.member.Member: #ignore dm's
+    if type(request.channel) != discord.TextChannel: #ignore dm's
         await request.channel.send("https://tenor.com/view/kermit-awkward-smile-gif-14338677")
         return
-    if type(request.channel) != discord.TextChannel: #ignore dm's again (you never know!)
+    if type(request.author) != discord.member.Member: #ignore non guild users
         return
     
     error = None
