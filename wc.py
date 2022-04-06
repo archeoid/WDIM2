@@ -106,7 +106,7 @@ class WordCloud:
         # Constants
         self.max_font_size = int(height/2)
         self.min_font_size = 4
-        self.inc_font_size = 1
+        self.inc_font_size = 2
         self.outline = 0.03
         self.padding = 3
         self.vertical_text = True

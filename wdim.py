@@ -4,6 +4,8 @@ import string
 import emoji
 import re
 import datetime
+import time
+import os
 from urllib import request
 
 from tokenization import unigrams_and_bigrams
@@ -16,14 +18,15 @@ SPLIT_REGEX = re.compile('|'.join(map(re.escape, [c for c in string.whitespace])
 PUNC_TRANSLATE = str.maketrans('', '', string.punctuation)
 FILTERED_WORDS = ["", "below","id","could","been","out","youll","am","both","cant","wheres","youve","ours","own","not","for","its","me","r","isnt","ill","all","can","www","shouldnt","after","ought","herself","very","and","than","well","our","whats","against","being","whens","under","wouldnt","lets","of","over","to","like","her","yours","in","just","each","the","your","itself","she","couldnt","too","by","this","it","my","com","ever","few","hers","ive","shall","hows","did","there","you","with","so","otherwise","yourself","same","such","yourselves","whom","here","themselves","have","while","whos","during","myself","only","that","whys","is","thats","these","hell","his","cannot","hed","from","further","mustnt","before","wed","he","theyll","do","them","arent","their","we","they","http","hadnt","ourselves","why","would","other","havent","shell","was","didnt","has","theyd","had","more","doesnt","but","also","shes","those","hence","having","youre","as","were","shed","down","heres","again","doing","who","him","its","i","were","hasnt","theyve","through","into","since","where","a","does","if","k","what","else","above","himself","werent","when","any","be","should","theirs","no","hes","then","up","wont","most","theyre","weve","are","off","shant","an","get","until","because","however","which","therefore","or","about","youd","once","nor","some","dont","between","at","theres","im","wasnt","how","on","oh","yeah","stuff","well","still","make","ok","on"]
 
+PARAMETER_REGEX = re.compile("^(?P<duration>[0-9]+)(?P<unit>[mhd])$")
+
 cooldowns = {}
 COOLDOWN = datetime.timedelta(minutes=5)
 MAXTIME = datetime.timedelta(days=7)
 OVERLOOK = datetime.timedelta(minutes=3)
 
-async def on_wdim(request, client):
-    parameters = request.content.lower()
-    parameters = parameters.removeprefix('.wdim').removeprefix('.wc').strip()
+async def on_wdim(request, parameters, client):
+    start = time.time()
 
     now = request.created_at
     author = request.author.id
@@ -67,7 +70,14 @@ async def on_wdim(request, client):
     if len(data) == 0:
         return "You're all caught up!"
 
+    for i in range(len(data)):
+        if type(data[i]) == int:
+            data[i] = resolve_discord_emoji(data[i])
+
+    elapsed = int(time.time()-start)
+
     message = f"There were {count} messages in the last {stringify_time(delta)}!"
+    message += f" Discord took {elapsed}s"
 
     async with request.channel.typing():
         await do_wordcloud(request, data, message)
@@ -75,9 +85,7 @@ async def on_wdim(request, client):
 
 async def do_wordcloud(request, data, message):
     #resolve the emoji IDs into image surfaces for wc.py
-    for i in range(len(data)):
-        if type(data[i]) == int:
-            data[i] = resolve_discord_emoji(data[i])
+    start = time.time()
 
     wordcloud = wc.WordCloud(1200, 600, "Whitney", "TwemojiMozilla.ttf")
 
@@ -85,6 +93,10 @@ async def do_wordcloud(request, data, message):
 
     wordcloud.compute()
     image = wordcloud.write()
+
+    elapsed = int(time.time()-start)
+
+    message += f", Wordcloud took {elapsed}s."
 
     await request.reply(content=message, file=discord.File(image, filename="wordcloud.png"))
 
@@ -94,29 +106,36 @@ def parse_time(time_string):
     if not time_string:
         return MAXTIME, None
 
+    duration = ""
+    unit = ""
+
+    if m := PARAMETER_REGEX.fullmatch(time_string):
+        duration = m.group('duration')
+        unit = m.group('unit')
+    else:
+        return None, "Invalid input"
+
     delta = 0
     
-    duration = time_string[:-1]
     try:
         delta = int(duration)
     except Exception:
-        return None, f"Invalid time duration: '{duration}'"
-    if delta <= 0:
-        return None, f"Negative time duration: '{duration}'"
-    unit = time_string[-1].lower()
+        return None, "Invalid time duration"
+    
     if unit == "d":
         delta *= 86400
     elif unit == "h":
         delta *= 3600
     elif unit == "m":
         delta *= 60
-    else:
-        return None, f"Unknown time unit: '{unit}'"
 
+    if delta <= 0:
+        return None, "Far too weak!"
+    
     try:
         delta = datetime.timedelta(seconds=delta)
     except Exception:
-        return None, error
+        return None, "Too powerful!"
 
     if delta > MAXTIME:
         return None, "7 days maximum!"
@@ -146,15 +165,32 @@ def stringify_time(delta):
 
 def resolve_discord_emoji(d):
     file = f"{d}.png"
+    path = f"cache/{file}"
 
-    url = f"https://cdn.discordapp.com/emojis/{file}"
-    try:
-        req = request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        data = request.urlopen(req).read()
+    data = None
 
-        return wc.png_to_surface(data)
-    except Exception:
-        return wc.png_to_surface(None)
+    if not os.path.exists("cache"):
+        os.makedirs("cache")
+
+    if not os.path.isfile(path):
+        url = f"https://cdn.discordapp.com/emojis/{file}"
+        try:
+            req = request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            data = request.urlopen(req).read()
+            file = open(path, 'wb')
+            file.write(data)
+            file.close()
+        except Exception as e:
+            print(e)
+            pass
+    else:
+        file = open(path, 'rb')
+        data = file.read()
+        file.close()
+
+    return wc.png_to_surface(data)
+
+    
 
 def tokenize(message):
     message = message.lower()

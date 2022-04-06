@@ -5,6 +5,10 @@ import mcrib
 
 import random
 import time
+import re
+
+WDIM_REGEX = re.compile("^\.(wc|wdim)\s*(?P<parameters>.*)$")
+
 
 client_intents = discord.Intents()
 client_intents.guilds = True
@@ -49,9 +53,10 @@ async def on_message(request):
 
     command = request.content.lower()
 
-    if command.startswith('.wdim') or command.startswith('.wc'):
+    if m := WDIM_REGEX.fullmatch(command):
+        params = m.group('parameters')
         async with request.channel.typing():
-            error = await wdim.on_wdim(request, client)
+            error = await wdim.on_wdim(request, params, client)
     
     if command.startswith('.roles'):
         error = await roles.on_command(request)

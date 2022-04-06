@@ -5,11 +5,6 @@
 #include <fontconfig/fontconfig.h>
 
 static int random_int(int start, int end) {
-    static int first = 1;
-    if(first) {
-        srand(time(NULL));
-        first = 0;
-    }
     if(start == end) {
         return start;
     }
@@ -25,6 +20,7 @@ int query_location(int* sum, int w, int h, int x, int y, int space_w, int space_
 
 int get_space(int* sum, int w, int h, int space_w, int space_h, int* out_x, int* out_y) {
     int area, x, y;
+    srand(time(NULL));
 
     //first just guess randomly (more efficient early on)
     for(int d = 0; d < 1000; d++) {
