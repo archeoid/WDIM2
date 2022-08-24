@@ -2,13 +2,13 @@ import discord
 import wdim
 import roles
 import mcrib
+import nonsense
 
 import random
 import time
 import re
 
 WDIM_REGEX = re.compile("^\.(wc|wdim)\s*(?P<parameters>.*)$")
-
 
 client_intents = discord.Intents()
 client_intents.guilds = True
@@ -23,6 +23,7 @@ random.seed(time.time())
 wdim.initialize()
 
 token = ""
+
 with open('token.txt') as f:
     token = f.read()
 
@@ -30,24 +31,25 @@ help = ""
 with open('help.txt') as f:
     help = f.read()
 
-
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
 
-    a = discord.Activity(type=discord.ActivityType.watching, name="👀")
-    g = discord.Game("Elden Ring")
-    await client.change_presence(status=discord.Status.online, activity=g)
+    a = discord.Activity(type=discord.ActivityType.watching, name="for weakness")
+    await client.change_presence(status=discord.Status.online, activity=a)
+
+    await nonsense.initialize(client)
 
 @client.event
 async def on_message(request):
-    if request.author == client.user:
-        return
     if type(request.channel) != discord.TextChannel: #ignore dm's
-        await request.channel.send("https://tenor.com/view/kermit-awkward-smile-gif-14338677")
+        if request.author != client.user:
+            await request.reply(content=nonsense.generate_nonsense())
         return
     if type(request.author) != discord.member.Member: #ignore non guild users
         return
+
+    await nonsense.process_message(request)
     
     error = None
 
@@ -57,16 +59,17 @@ async def on_message(request):
         params = m.group('parameters')
         async with request.channel.typing():
             error = await wdim.on_wdim(request, params, client)
-    
-    if command.startswith('.roles'):
-        error = await roles.on_command(request)
-
-    if command.startswith('.help'):
+    elif command.startswith('.help'):
         error = f"```\n{help}```"
-
-    if command.startswith('.mcrib'):
+    elif command.startswith('.mcrib'):
         error = await mcrib.on_mcrib(request)
-
+    elif command.startswith('.nonsense'):
+        await nonsense.send_status(request)
+    elif request.author != client.user and command.startswith('.roles'): #dont let it call privileged commands
+        error = await roles.on_command(request)
+    elif request.author != client.user and nonsense.should_respond(request, client): #dont let it respond to itself
+        await request.reply(nonsense.generate_nonsense())
+    
     if error:
         await request.reply(error)
 

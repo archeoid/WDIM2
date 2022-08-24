@@ -146,6 +146,10 @@ class WordCloud:
         self.ctx = cairo.Context.create(self.surface)
         self.mask.reset()
 
+        self.ctx.source_colour = (0.2117, 0.22352, 0.247, 1)
+        self.ctx.rectangle(cairo.Rect(0, 0, self.width, self.height))
+        self.ctx.fill()
+
         self.data = []
 
     def add_data(self, data):

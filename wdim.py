@@ -87,7 +87,7 @@ async def do_wordcloud(request, data, message):
     #resolve the emoji IDs into image surfaces for wc.py
     start = time.time()
 
-    wordcloud = wc.WordCloud(1200, 600, "Whitney", "TwemojiMozilla.ttf")
+    wordcloud = wc.WordCloud(1920, 1080, "Whitney", "TwemojiMozilla.ttf")
 
     wordcloud.add_data(data)
 
