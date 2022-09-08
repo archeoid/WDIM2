@@ -3,6 +3,7 @@ import wdim
 import roles
 import mcrib
 import nonsense
+import flip
 
 import random
 import time
@@ -65,6 +66,8 @@ async def on_message(request):
         error = await mcrib.on_mcrib(request)
     elif command.startswith('.nonsense'):
         await nonsense.send_status(request)
+    elif command.startswitrh('.flip'):
+        error = await flip.flip_coint(request)
     elif request.author != client.user and command.startswith('.roles'): #dont let it call privileged commands
         error = await roles.on_command(request)
     elif request.author != client.user and nonsense.should_respond(request, client): #dont let it respond to itself
