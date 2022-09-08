@@ -67,7 +67,7 @@ async def on_message(request):
     elif command.startswith('.nonsense'):
         await nonsense.send_status(request)
     elif command.startswitrh('.flip'):
-        error = await flip.flip_coint(request)
+        error = await flip.flip_coin(request)
     elif request.author != client.user and command.startswith('.roles'): #dont let it call privileged commands
         error = await roles.on_command(request)
     elif request.author != client.user and nonsense.should_respond(request, client): #dont let it respond to itself
