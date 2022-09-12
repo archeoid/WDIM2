@@ -33,8 +33,11 @@ def append(p, line):
         p[a] += [b]
 
 def delete(p, token):
+    token = token.lower()
     for a in p:
-        p[a] = [t for t in p[a] if t != token]
+        p[a] = [t for t in p[a] if t.lower() != token]
+        if p[a] == []:
+            del p[a]
 
 def generate(p, n = None):
     if not n:

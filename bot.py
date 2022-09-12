@@ -57,35 +57,34 @@ async def on_message(request):
     if request.author != client.user:
         await nonsense.process_message(request)
     
-    error = None
+    reply = None
 
     command = request.content.lower()
 
     if m := WDIM_REGEX.fullmatch(command):
         params = m.group('parameters')
         async with request.channel.typing():
-            error = await wdim.on_wdim(request, params, client)
+            reply = await wdim.on_wdim(request, params, client)
     elif command.startswith('.help'):
-        error = f"```\n{help}```"
+        reply = f"```\n{help}```"
     elif command.startswith('.mcrib'):
         async with request.channel.typing():
-            error = await mcrib.on_mcrib(request)
+            reply = await mcrib.on_mcrib(request)
     elif command.startswith('.nonsense'):
-        error = await nonsense.on_nonsense(request, client)
+        reply = await nonsense.on_nonsense(request, client)
     elif command.startswith('.flip'):
-        error = await flip.flip_coin(request)
+        reply = await flip.flip_coin(request)
     elif request.author != client.user and command.startswith('.roles'): #dont let it call privileged commands
-        error = await roles.on_command(request)
+        reply = await roles.on_command(request)
     elif client.user in request.mentions:
-        if questions.decompose(request) is not None:
-            error = await questions.choose_answer(request)
-        else:
+        reply = await questions.choose_answer(request)
+        if not reply:
             await nonsense.respond(request, client)
     else:
         await nonsense.respond(request, client)
     
-    if error:
-        await request.reply(error)
+    if reply:
+        await request.reply(reply)
 
 @client.event
 async def on_raw_reaction_add(payload):
