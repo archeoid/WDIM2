@@ -105,7 +105,7 @@ class WordCloud:
 
         # Constants
         self.max_font_size = int(height/2)
-        self.min_font_size = 4
+        self.min_font_size = 8
         self.inc_font_size = 2
         self.outline = 0.03
         self.padding = 3
@@ -146,9 +146,9 @@ class WordCloud:
         self.ctx = cairo.Context.create(self.surface)
         self.mask.reset()
 
-        self.ctx.source_colour = (0.2117, 0.22352, 0.247, 1)
-        self.ctx.rectangle(cairo.Rect(0, 0, self.width, self.height))
-        self.ctx.fill()
+        #self.ctx.source_colour = (0.2117, 0.22352, 0.247, 1)
+        #self.ctx.rectangle(cairo.Rect(0, 0, self.width, self.height))
+        #self.ctx.fill()
 
         self.data = []
 

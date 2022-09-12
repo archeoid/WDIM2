@@ -1,53 +1,91 @@
 import random
 
-def process(lines):
+def init(n):
     p = {}
+    p[None] = n
+    return p
 
+def process(p, lines):
     for l in lines:
         append(p, l)
 
-    return p
+def tokenize(n, line):
+    spans = []
+    tokens = [t for t in line.split() if t]
+    tokens = ["^"] + tokens + ["$"]
+    
+    for i in range(len(tokens)):
+        span = []
+        for j in range(min(n, len(tokens)-i)):
+            span += [tokens[i+j]]
+            if j:
+                spans += [[i for i in span]]
+
+    return spans
 
 def append(p, line):
-    if not "^" in p:
-        p["^"] = []
-    
-    words = line.split()
+    n = p[None]
+    for t in tokenize(n, line):
+        a = ' '.join(t[:-1]).lower()
+        b = t[-1]
+        if not a in p:
+            p[a] = []
+        p[a] += [b]
 
-    if len(words) == 0:
-        return
+def delete(p, token):
+    for a in p:
+        p[a] = [t for t in p[a] if t != token]
 
-    p["^"].append(words[0])
-
-    for i in range(1, len(words)):
-        last = words[i-1]
-        key = last.lower()
-        this = words[i]
-
-        if not key in p:
-            p[key] = []
-        
-        p[key].append(this.strip())
-
-    last = words[-1].lower()
-    if not last in p:
-        p[last] = []
-    
-    p[last].append("$")
-
-def generate(p):
-    current = "^"
-    out = ""
+def generate(p, n = None):
+    if not n:
+        n = p[None]
+    tokens = ["^"]
     while True:
-        if not current.lower() in p:
+        a = ' '.join(tokens[-min(len(tokens), n-1):]).lower()        
+        b = random.choice(p[a])
+        tokens += [b]
+        if b == "$":
             break
-        current = random.choice(p[current.lower()])
+        
+    return ' '.join(tokens[1:-1])
 
-        if current == "$":
+def diminishing(n):
+    weightings = []
+    w = 0.5
+    for i in range(n):
+        weightings += [w]
+        if i != n-2:
+            w /= 2
+    return weightings
+
+def analysis(p, line):
+    n = p[None]
+    scores = [0]*(n-1)
+    totals = [0]*(n-1)
+
+    for t in tokenize(n, line):
+        j = len(t)-2
+        a = ' '.join(t[:-1]).lower()
+        b = t[-1]
+        if b == "$":
+            continue
+        
+        if a in p and b in p[a]:
+            scores[j] += 1
+        totals[j] += 1
+
+    score = scores[0]/totals[0]
+
+    ln = 0
+    for i in range(len(totals)):
+        if totals[i] == 0:
             break
+        ln += 1
+    
+    if ln > 1:
+        score = 0
+        weightings = diminishing(ln)
+        for i in range(ln):
+            score += (scores[i]/totals[i]) * weightings[i]
 
-        if current in "!,?.":
-            out = out[:-1]
-
-        out += current + " "
-    return out
+    return score

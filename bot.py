@@ -43,14 +43,19 @@ async def on_ready():
 
 @client.event
 async def on_message(request):
-    if type(request.channel) != discord.TextChannel: #ignore dm's
+    if type(request.channel) == discord.DMChannel: #respond to dms
         if request.author != client.user:
             await request.reply(content=nonsense.generate_nonsense())
         return
+    
+    if type(request.channel) != discord.TextChannel: #ignore unknown channels
+        return
+        
     if type(request.author) != discord.member.Member: #ignore non guild users
         return
 
-    await nonsense.process_message(request)
+    if request.author != client.user:
+        await nonsense.process_message(request)
     
     error = None
 
@@ -63,15 +68,16 @@ async def on_message(request):
     elif command.startswith('.help'):
         error = f"```\n{help}```"
     elif command.startswith('.mcrib'):
-        error = await mcrib.on_mcrib(request)
+        async with request.channel.typing():
+            error = await mcrib.on_mcrib(request)
     elif command.startswith('.nonsense'):
-        await nonsense.send_status(request)
+        error = await nonsense.on_nonsense(request, client)
     elif command.startswith('.flip'):
         error = await flip.flip_coin(request)
     elif request.author != client.user and command.startswith('.roles'): #dont let it call privileged commands
         error = await roles.on_command(request)
-    elif request.author != client.user and nonsense.should_respond(request, client): #dont let it respond to itself
-        await request.reply(nonsense.generate_nonsense())
+    else:
+        await nonsense.respond(request, client)
     
     if error:
         await request.reply(error)

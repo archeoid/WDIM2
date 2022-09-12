@@ -8,6 +8,9 @@ import time
 import os
 from urllib import request
 
+import asyncio
+import concurrent.futures
+
 from tokenization import unigrams_and_bigrams
 
 UNICODE_EMOJI_REGEX = emoji.get_emoji_regexp()
@@ -26,8 +29,6 @@ MAXTIME = datetime.timedelta(days=7)
 OVERLOOK = datetime.timedelta(minutes=3)
 
 async def on_wdim(request, parameters, client):
-    start = time.time()
-
     now = request.created_at
     author = request.author.id
     channel = request.channel.id
@@ -45,7 +46,7 @@ async def on_wdim(request, parameters, client):
     tokens = []
     count = 0
     async for m in request.channel.history(limit=None, after=now-delta, oldest_first=False):
-        if m.author.id == client.user.id: #ignore our messages
+        if author != client.user.id and m.author.id == client.user.id: #ignore our messages
             continue
         if m.content.startswith('.'): #ignore request messages
             continue
@@ -74,32 +75,20 @@ async def on_wdim(request, parameters, client):
         if type(data[i]) == int:
             data[i] = resolve_discord_emoji(data[i])
 
-    elapsed = int(time.time()-start)
 
+    image = await do_wordcloud(request, data)
     message = f"There were {count} messages in the last {stringify_time(delta)}!"
-    message += f" Discord took {elapsed}s"
+    await request.reply(content=message, file=discord.File(image, filename="wordcloud.png"))
 
-    async with request.channel.typing():
-        await do_wordcloud(request, data, message)
-    return None
-
-async def do_wordcloud(request, data, message):
-    #resolve the emoji IDs into image surfaces for wc.py
-    start = time.time()
-
+async def do_wordcloud(request, data):
     wordcloud = wc.WordCloud(1920, 1080, "Whitney", "TwemojiMozilla.ttf")
 
     wordcloud.add_data(data)
 
-    wordcloud.compute()
-    image = wordcloud.write()
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, wc.WordCloud.compute, wordcloud)
 
-    elapsed = int(time.time()-start)
-
-    message += f", Wordcloud took {elapsed}s."
-
-    await request.reply(content=message, file=discord.File(image, filename="wordcloud.png"))
-
+    return wordcloud.write()
 
 def parse_time(time_string):
     #turn time string into a time delta
