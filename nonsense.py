@@ -42,8 +42,6 @@ async def initialize(client):
 
     bot_mention = f"<@{client.user.id}>"
 
-    await dump()
-
     await fetch_history(client) 
 
 async def fetch_history(client):
@@ -138,7 +136,7 @@ async def on_nonsense(request, client):
         return f"tokens: {len(nonsense)}"
     
     #authorized commands below this
-    if not request.author.guild_permissions.manage_roles and not request.author.id == 254172526782054400:
+    if not request.author.guild_permissions.manage_roles:
         await request.add_reaction(random.choice(ERROR_EMOJI))
         return
     
