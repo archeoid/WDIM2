@@ -76,6 +76,11 @@ async def on_message(request):
         error = await flip.flip_coin(request)
     elif request.author != client.user and command.startswith('.roles'): #dont let it call privileged commands
         error = await roles.on_command(request)
+    elif client.user in request.mentions:
+        if questions.decompose(request) is not None:
+            error = await questions.choose_answer(request)
+        else:
+            await nonsense.respond(request, client)
     else:
         await nonsense.respond(request, client)
     
