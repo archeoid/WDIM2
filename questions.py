@@ -25,6 +25,8 @@ def find_options(query):
     naive = query.split()
     if len(naive) == 3 and naive[1].lower() == "or":
         return [naive[0], naive[2].replace("?", "")]
+    if len(naive) == 1 and naive[0][-1] == "?":
+        return ["yes", "no"]
 
     # try do proper parsing, fallback to regex
     options = parse.find_options(query)

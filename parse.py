@@ -40,11 +40,7 @@ def case_transfer(s, query):
 
 def find_options(query):
     options = []
-    stdout = sys.stdout
-    f = open('/dev/null', 'w')
-    sys.stdout = f
     with ace.ACEParser('erg.dat', cmdargs=["-1"], tsdbinfo=True) as parser:
-        
         response = parser.interact(query)
         derivation = response.result(0).derivation().to_dict(fields=('form', 'entity', 'daughters'))
 
