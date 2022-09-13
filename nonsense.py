@@ -5,6 +5,9 @@ import time
 import datetime
 import os
 import pickledb
+import parse
+import tree
+import io
 
 RANDOM_MESSAGE_INTERVAL = 50
 SLOW_MODE_COOLDOWN = datetime.timedelta(minutes=1)
@@ -126,6 +129,19 @@ def generate_nonsense():
 
     return out
 
+async def try_parse(request, query):
+    derivation = parse.parse(query)
+
+    if not derivation:
+        await request.reply(content="Failed to parse!")
+        return
+
+    image = io.BytesIO()
+    tree.render(query, derivation, image)
+    image.seek(0)
+
+    await request.reply(file=discord.File(image, filename="parse.png"))
+
 async def on_nonsense(request, client):
     if request.author == client.user:
         await request.add_reaction(random.choice(CONFUSED_EMOJI))
@@ -134,6 +150,20 @@ async def on_nonsense(request, client):
     command = request.content.removeprefix(".nonsense").strip().lower()
     if command == "tokens" or command == "":
         return f"tokens: {len(nonsense)}"
+    elif command.startswith("parse"):
+        query = request.content.removeprefix(".nonsense parse").strip()
+
+        if request.reference:
+            reference = request.reference.resolved
+            if reference and type(reference) == discord.Message:
+                query = reference.content.strip()
+            
+        if query == "":
+            await request.add_reaction(random.choice(ERROR_EMOJI))
+            return
+        
+        await try_parse(request, query)
+        return
     
     #authorized commands below this
     if not request.author.guild_permissions.manage_roles:

@@ -33,7 +33,6 @@ def find_options(query):
     if options:
         return options
     
-
     # extract the "or ###?"
     tail = POSTFIX_REGEX.search(query)
 

@@ -38,30 +38,38 @@ def case_transfer(s, query):
     i = query.lower().index(s.lower())
     return query[i:i+len(s)]
 
-def find_options(query):
-    options = []
+def parse(query):
+    derivation = {}
+
     with ace.ACEParser('erg.dat', cmdargs=["-1"], tsdbinfo=True) as parser:
         response = parser.interact(query)
+        if len(response.results()) == 0:
+            return []
         derivation = response.result(0).derivation().to_dict(fields=('form', 'entity', 'daughters'))
+    return derivation
 
-        trees = []
-        extract(derivation, trees)
+def find_options(query):
+    options = []
+    trees = []
 
-        for t in trees:
-            if "daughters" in t and all([d in trees for d in t["daughters"]]):
-                continue
-            s = []
-            flatten(t, s)
-            o = ' '.join(s)
-            if o[-1] == ',' or o[-1] == '?':
-                o = o[:-1]
-            o = case_transfer(o, query)
-            options += [o]
+    derivation = parse(query)
+    extract(derivation, trees)
 
-        if len(options) == 0:
-            yesno = [False]
-            has_yesno(derivation, yesno)
-            if yesno[0]:
-                options = ["yes", "no"]
+    for t in trees:
+        if "daughters" in t and all([d in trees for d in t["daughters"]]):
+            continue
+        s = []
+        flatten(t, s)
+        o = ' '.join(s)
+        if o[-1] == ',' or o[-1] == '?':
+            o = o[:-1]
+        o = case_transfer(o, query)
+        options += [o]
+
+    if len(options) == 0:
+        yesno = [False]
+        has_yesno(derivation, yesno)
+        if yesno[0]:
+            options = ["yes", "no"]
 
     return options
