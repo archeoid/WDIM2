@@ -31,6 +31,10 @@ help = ""
 with open('help.txt') as f:
     help = f.read()
 
+capy = ""
+with open('Capybnnara.txt') as f:
+    capy = f.read()
+ 
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
@@ -66,6 +70,8 @@ async def on_message(request):
             reply = await wdim.on_wdim(request, params, client)
     elif command.startswith('.help'):
         reply = f"```\n{help}```"
+    elif command.startswith('.capybara'):
+        reply = f"```\n{capy}```"
     elif command.startswith('.mcrib'):
         async with request.channel.typing():
             reply = await mcrib.on_mcrib(request)
