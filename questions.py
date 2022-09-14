@@ -13,14 +13,6 @@ PREFIXS = ["Hmm... I think you should go with ", "Definitely ", "Are you stupid?
 POSTFIXS = [".", " for sure", "!", ", yeah"]
 
 def find_options(query):
-    query = query.content
-    query = query.strip()
-
-    # remove all mentions from message content
-    mentions = MENTIONS_REGEX.findall(query)  
-    for mention in mentions:
-        query = query.replace(mention, "")
-
     # check for the naive "A or B", "A or B?"
     naive = query.split()
     if len(naive) == 3 and naive[1].lower() == "or":
@@ -29,7 +21,8 @@ def find_options(query):
         return ["yes", "no"]
 
     # try do proper parsing, fallback to regex
-    options = parse.find_options(query)
+    derivation = parse.parse(query)
+    options = parse.find_options(query, derivation)
     if options:
         return options
     
@@ -66,11 +59,7 @@ def find_options(query):
 
     return options
 
-async def choose_answer(query):
-    options = find_options(query)
-    if not options:
-        return None
-
+async def choose_answer(options):
     answer = random.choice(options)
     prefix = random.choice(PREFIXS)
     postfix = random.choice(POSTFIXS)

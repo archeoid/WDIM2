@@ -1,11 +1,11 @@
 import skia
 
-FONT = skia.Font(skia.Typeface('Serif'), 24)
-PADDING_X = 30
-PADDING_Y = 50
+FONT = skia.Font(skia.Typeface('Serif'), 48)
+PADDING_X = 60
+PADDING_Y = 100
 
-TITLE_FONT = skia.Font(skia.Typeface('Serif'), 48)
-TITLE_HEIGHT = 60
+TITLE_FONT = skia.Font(skia.Typeface('Serif'), 96)
+TITLE_HEIGHT = 120
 
 class Node:
     def __init__(self, label):
@@ -85,7 +85,7 @@ def truncate(text, font, width):
     return text
 
 def draw_line(canvas, p0, p1):
-    paint = skia.Paint(AntiAlias=True, StrokeWidth=2, Style=skia.Paint.kStroke_Style)
+    paint = skia.Paint(AntiAlias=True, StrokeWidth=4.1, Style=skia.Paint.kStroke_Style)
     canvas.drawLine(p0, p1, paint)
 
 def draw_rect(canvas, rect):
@@ -144,13 +144,13 @@ def render(prompt, derivation, out):
 
     width, height = root.bound.width() + PADDING_X, root.bound.height() + PADDING_Y
 
-    surface = skia.Surface(int(width + PADDING_X), int(height + PADDING_Y/2 + TITLE_HEIGHT))
+    surface = skia.Surface(int(width + PADDING_X), int(height + TITLE_HEIGHT))
     canvas = surface.getCanvas()
     canvas.clear(0xFFFFFFFF)
 
     draw(canvas, root, skia.Point(PADDING_X, TITLE_HEIGHT + PADDING_Y/2))
     draw_title(canvas, prompt, width+PADDING_X)
 
-    canvas.scale(2, 2)
+    #canvas.scale(2, 2)
     image = surface.makeImageSnapshot()
     image.save(out, skia.kPNG)

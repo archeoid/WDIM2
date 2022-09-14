@@ -34,15 +34,28 @@ def append(p, line):
 
 def delete(p, token):
     token = token.lower()
+    removed = 0
+
+    deletion = []
     for a in p:
+        if not a:
+            continue
+        before = len(p[a])
         p[a] = [t for t in p[a] if t.lower() != token]
+        removed += before - len(p[a])
         if p[a] == []:
-            del p[a]
+            deletion += [a]
+    
+    for d in deletion:
+        del p[d]
+
+    return removed
 
 def generate(p, n = None):
     if not n:
         n = p[None]
     tokens = ["^"]
+
     while True:
         a = ' '.join(tokens[-min(len(tokens), n-1):]).lower()        
         b = random.choice(p[a])

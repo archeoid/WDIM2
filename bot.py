@@ -4,7 +4,6 @@ import roles
 import mcrib
 import nonsense
 import flip
-import questions
 import random
 import time
 import re
@@ -76,10 +75,6 @@ async def on_message(request):
         reply = await flip.flip_coin(request)
     elif request.author != client.user and command.startswith('.roles'): #dont let it call privileged commands
         reply = await roles.on_command(request)
-    elif client.user in request.mentions:
-        reply = await questions.choose_answer(request)
-        if not reply:
-            await nonsense.respond(request, client)
     else:
         await nonsense.respond(request, client)
     

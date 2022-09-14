@@ -24,6 +24,16 @@ def extract(derivation, interest):
     for d in derivation["daughters"]:
         extract(d, interest)
 
+def has_generic(derivation, generic):
+    if "generic" in derivation['entity']:
+        generic[0] = True
+
+    if not "daughters" in derivation:
+        return
+
+    for d in derivation["daughters"]:
+        has_generic(d, generic)
+
 def has_yesno(derivation, yesno):
     if not "daughters" in derivation:
         return
@@ -34,25 +44,50 @@ def has_yesno(derivation, yesno):
     for d in derivation["daughters"]:
         has_yesno(d, yesno)
 
-def case_transfer(s, query):
-    i = query.lower().index(s.lower())
-    return query[i:i+len(s)]
+def case_transfer(tokens, original):
+    min_index = len(original)
+    max_index = 0
+    
+    lower = original.lower()
 
-def parse(query):
+    for t in tokens:
+        start = lower.index(t.lower())
+        end = start + len(t)
+
+        if start < min_index:
+            min_index = start
+        
+        if end > max_index:
+            max_index = end
+
+    return original[min_index:max_index]
+
+def parse(query, allow_generic=True):
+    if 'http' in query:
+        return []
+
     derivation = {}
 
     with ace.ACEParser('erg.dat', cmdargs=["-1"], tsdbinfo=True) as parser:
         response = parser.interact(query)
+
         if len(response.results()) == 0:
             return []
+
         derivation = response.result(0).derivation().to_dict(fields=('form', 'entity', 'daughters'))
+
+    if derivation and not allow_generic:
+        generic = [False]
+        has_generic(derivation, generic)
+        if generic[0]:
+            return []
+
     return derivation
 
-def find_options(query):
+def find_options(query, derivation):
     options = []
     trees = []
 
-    derivation = parse(query)
     extract(derivation, trees)
 
     for t in trees:
@@ -60,10 +95,11 @@ def find_options(query):
             continue
         s = []
         flatten(t, s)
-        o = ' '.join(s)
-        if o[-1] == ',' or o[-1] == '?':
-            o = o[:-1]
-        o = case_transfer(o, query)
+        
+        if s[-1] == ',' or s[-1] == '?':
+            s = s[:-1]
+        
+        o = case_transfer(s, query)
         options += [o]
 
     if len(options) == 0:

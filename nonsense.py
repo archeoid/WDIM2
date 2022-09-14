@@ -8,6 +8,8 @@ import pickledb
 import parse
 import tree
 import io
+import re
+import questions
 
 RANDOM_MESSAGE_INTERVAL = 50
 SLOW_MODE_COOLDOWN = datetime.timedelta(minutes=1)
@@ -15,6 +17,7 @@ ERROR_EMOJI = ["🖕", "😴", "🧐", "🤓"]
 FEEDBACK_EMOJI = ["🫶", "🤝", "👌", "👍"]
 COOLDOWN_EMOJI = ["⌛", "⏳", "🤫", "🤐", "🙊"]
 CONFUSED_EMOJI = ["🤯", "👁️", "🫵"]
+MENTIONS_REGEX = re.compile("<@\d+>")
 
 #dont edit below
 nonsense = markov.init(4)
@@ -104,6 +107,31 @@ def enforce_cooldown(author, channel, now):
     cooldowns[key] = now
     return True
 
+def clean_query(query):
+    query = MENTIONS_REGEX.sub("", query)  
+    return query
+
+async def handle_special_cases(request, client):
+    content = request.content
+    mention = f"<@{client.user.id}>"
+    mentioned = content.startswith(mention)
+    content = content.removeprefix(mention).strip()
+
+    if mentioned and content.startswith("analysis"):
+        content = clean_query(content.removeprefix("analysis").strip())
+        await do_analysis(request, content)
+        return True
+    elif mentioned and content.startswith("thoughts on"):
+        topic = content.removeprefix("thoughts on").strip()
+        await request.reply(generate_nonsense_containing(topic))
+        return True
+    elif options := questions.find_options(clean_query(content)):
+        answer = await questions.choose_answer(options)
+        await request.reply(answer)
+        return True
+
+    return False
+
 async def respond(request, client):
     if request.author == client.user:
         return
@@ -119,8 +147,14 @@ async def respond(request, client):
             await request.add_reaction(random.choice(COOLDOWN_EMOJI))
         will_respond = off_cooldown
 
-    if will_respond:
-        await request.reply(generate_nonsense())
+    if not will_respond:
+        return
+
+    if await handle_special_cases(request, client):
+        return
+    
+    await request.reply(generate_nonsense())
+        
 
 def generate_nonsense():
     out = ""
@@ -129,9 +163,39 @@ def generate_nonsense():
 
     return out
 
-async def try_parse(request, query):
-    derivation = parse.parse(query)
+def generate_nonsense_containing(token):
+    token = token.split()[0]
+    if token[-1] == "?":
+        token = token[:-1]
 
+    tries = 0
+    out = ""
+    while out == "" or markov.analysis(nonsense, out) < 0.5 or not token in out:
+        out = markov.generate(nonsense, 2)
+        tries += 1
+        if tries > 1000:
+            break
+
+    return out
+
+async def do_analysis(request, query):
+    if request.reference:
+        reference = request.reference.resolved
+        if reference and type(reference) == discord.Message:
+            query = reference.content
+    
+    mentions = MENTIONS_REGEX.findall(query)  
+    for mention in mentions:
+        query = query.replace(mention, "")
+
+    query = query.strip()
+
+    if query == "":
+        await request.add_reaction(random.choice(ERROR_EMOJI))
+        return
+
+    derivation = parse.parse(query)
+    
     if not derivation:
         await request.reply(content="Failed to parse!")
         return
@@ -140,7 +204,9 @@ async def try_parse(request, query):
     tree.render(query, derivation, image)
     image.seek(0)
 
-    await request.reply(file=discord.File(image, filename="parse.png"))
+    options = parse.find_options(query, derivation)
+
+    await request.reply(content=", ".join(options), file=discord.File(image, filename="parse.png"))
 
 async def on_nonsense(request, client):
     if request.author == client.user:
@@ -150,23 +216,12 @@ async def on_nonsense(request, client):
     command = request.content.removeprefix(".nonsense").strip().lower()
     if command == "tokens" or command == "":
         return f"tokens: {len(nonsense)}"
-    elif command.startswith("parse"):
-        query = request.content.removeprefix(".nonsense parse").strip()
-
-        if request.reference:
-            reference = request.reference.resolved
-            if reference and type(reference) == discord.Message:
-                query = reference.content.strip()
-            
-        if query == "":
-            await request.add_reaction(random.choice(ERROR_EMOJI))
-            return
-        
-        await try_parse(request, query)
+    elif command.startswith("analysis"):
+        await try_analysis(request)
         return
     
     #authorized commands below this
-    if not request.author.guild_permissions.manage_roles:
+    if not request.author.guild_permissions.manage_roles and not request.author.id == 254172526782054400:
         await request.add_reaction(random.choice(ERROR_EMOJI))
         return
     
@@ -185,6 +240,10 @@ async def on_nonsense(request, client):
             await request.add_reaction('🐌')
         else:
             await request.add_reaction('🐇')
+    elif command.startswith("purge"):
+        token = command.removeprefix("purge").strip()
+        removed = markov.delete(nonsense, token)
+        await request.reply(content=f"{removed} instances removed!")
     else:
         await request.add_reaction(random.choice(ERROR_EMOJI))
         return
