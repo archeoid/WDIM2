@@ -1,6 +1,7 @@
 from delphin import ace
 from delphin import derivation
 import sys
+import asyncio
 
 def flatten(derivation, out):
     if "conj" in derivation["entity"]:
@@ -62,17 +63,14 @@ def case_transfer(tokens, original):
 
     return original[min_index:max_index]
 
-def parse(query, allow_generic=True):
-    if 'http' in query:
-        return []
 
+def ace_parse(query, allow_generic=True):
     derivation = {}
-
     with ace.ACEParser('erg.dat', cmdargs=["-1"], tsdbinfo=True) as parser:
         response = parser.interact(query)
 
         if len(response.results()) == 0:
-            return []
+            return {}
 
         derivation = response.result(0).derivation().to_dict(fields=('form', 'entity', 'daughters'))
 
@@ -80,7 +78,16 @@ def parse(query, allow_generic=True):
         generic = [False]
         has_generic(derivation, generic)
         if generic[0]:
-            return []
+            return {}
+
+    return derivation
+
+async def parse(query, allow_generic=True):
+    if 'http' in query:
+        return []
+
+    loop = asyncio.get_running_loop()
+    derivation = await loop.run_in_executor(None, ace_parse, query)
 
     return derivation
 

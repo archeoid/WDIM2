@@ -51,10 +51,52 @@ def delete(p, token):
 
     return removed
 
+def count(p, token):
+    token = token.lower()
+    found = 0
+
+    for a in p:
+        if not a:
+            continue
+        found += len([t for t in p[a] if token in t.lower()])
+
+    return found
+
+def after(p, token):
+    token = token.lower()
+    found = 0
+
+    after = set()
+
+    for a in p:
+        if not a:
+            continue
+        if a.endswith(token):
+            after |= set(p[a])
+
+    return len(after)
+
+def next(p, token):
+    token = token.lower()
+    found = 0
+
+    after = set()
+
+    for a in p:
+        if not a:
+            continue
+        if a.endswith(token):
+            after |= set(p[a])
+
+    return list(after)
+
 def generate(p, n = None):
     if not n:
         n = p[None]
     tokens = ["^"]
+
+    if not "^" in p:
+        return ""
 
     while True:
         a = ' '.join(tokens[-min(len(tokens), n-1):]).lower()        

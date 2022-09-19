@@ -117,16 +117,12 @@ async def handle_special_cases(request, client):
     mentioned = content.startswith(mention)
     content = content.removeprefix(mention).strip()
 
-    if mentioned and content.startswith("analysis"):
-        content = clean_query(content.removeprefix("analysis").strip())
-        await do_analysis(request, content)
-        return True
-    elif mentioned and content.startswith("thoughts on"):
+    if mentioned and content.startswith("thoughts on"):
         topic = content.removeprefix("thoughts on").strip()
         await request.reply(generate_nonsense_containing(topic))
         return True
-    elif options := questions.find_options(clean_query(content)):
-        answer = await questions.choose_answer(options)
+    elif options := await questions.find_options(clean_query(content)):
+        answer = questions.choose_answer(options)
         await request.reply(answer)
         return True
 
@@ -160,18 +156,23 @@ def generate_nonsense():
     out = ""
     while out == "" or markov.analysis(nonsense, out) < 0.5:
         out = markov.generate(nonsense, 2)
+        if out == "": #no history loaded yet
+            return "..."
 
     return out
 
 def generate_nonsense_containing(token):
-    token = token.split()[0]
-    if token[-1] == "?":
-        token = token[:-1]
+    if token:
+        token = token.split()[-1]
+        if token[-1] == "?":
+            token = token[:-1]
+    else:
+        token = " "
 
     tries = 0
     out = ""
-    while out == "" or markov.analysis(nonsense, out) < 0.5 or not token in out:
-        out = markov.generate(nonsense, 2)
+    while not token in out:
+        out = generate_nonsense()
         tries += 1
         if tries > 1000:
             break
@@ -194,7 +195,7 @@ async def do_analysis(request, query):
         await request.add_reaction(random.choice(ERROR_EMOJI))
         return
 
-    derivation = parse.parse(query)
+    derivation = await parse.parse(query)
     
     if not derivation:
         await request.reply(content="Failed to parse!")
@@ -217,13 +218,43 @@ async def on_nonsense(request, client):
     if command == "tokens" or command == "":
         return f"tokens: {len(nonsense)}"
     elif command.startswith("analysis"):
-        await try_analysis(request)
+        query = request.content
+        query = query.removeprefix(".nonsense").strip()
+        query = query.removeprefix("analysis").strip()
+        await do_analysis(request, query)
         return
+    elif command.startswith("count"):
+        token = command.removeprefix("count").strip()
+        if not token:
+            await request.add_reaction(random.choice(ERROR_EMOJI))
+            return
+        token = token.split()[0]
+        count = markov.count(nonsense, token)
+        return f"occurances: {count}"
+    elif command.startswith("after"):
+        token = command.removeprefix("after").strip()
+        if not token:
+            await request.add_reaction(random.choice(ERROR_EMOJI))
+            return
+        token = token.split()[0]
+        count = markov.after(nonsense, token)
+        return f"options: {count}"
     
     #authorized commands below this
     if not request.author.guild_permissions.manage_roles and not request.author.id == 254172526782054400:
         await request.add_reaction(random.choice(ERROR_EMOJI))
         return
+
+    if command.startswith("next"):
+        token = command.removeprefix("next").strip()
+        if not token:
+            await request.add_reaction(random.choice(ERROR_EMOJI))
+            return
+        token = token.split()[0]
+        options = '\n'.join(markov.next(nonsense, token))
+        if len(options) > 2000:
+            options = options[:1990] + " ..."
+        return f"```{options}```"
     
     if command == "fast":
         set_channel(request, "fast", True)
@@ -260,9 +291,3 @@ def set_channel(request, name, active):
         db.lpop(name, values.index(this))
         channels[name].remove(request.channel)
     db.dump()
-
-if os.path.isfile("forced.txt"):
-    text = ""
-    with open("forced.txt") as f:
-        text = f.read()
-    markov.process(nonsense, text.split('\n'))

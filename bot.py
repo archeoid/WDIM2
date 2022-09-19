@@ -56,9 +56,6 @@ async def on_message(request):
         
     if type(request.author) != discord.member.Member: #ignore non guild users
         return
-
-    if request.author != client.user:
-        await nonsense.process_message(request)
     
     reply = None
 
@@ -86,6 +83,9 @@ async def on_message(request):
     
     if reply:
         await request.reply(reply)
+
+    if request.author != client.user:
+        await nonsense.process_message(request)
 
 @client.event
 async def on_raw_reaction_add(payload):
